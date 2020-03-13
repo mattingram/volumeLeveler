@@ -1,58 +1,55 @@
+// Microphone Volume Leveler
+// Microphone threshold code based on https://github.com/joekrie/arduino-volume-detector/blob/master/volume-detector/volume-detector.ino
+
 #include <Arduino.h>
 
-//Map PCB for Arduino to NodeMCU
-const int GPIO0 = 3;
-const int GPIO2 = 4;
-const int GPIO3 = 9;
-const int GPIO4 = 2; // may need to swap 4/5
-const int GPIO5 = 1;
-const int GPIO9 = 11;
-const int GPIO10 = 12;
-const int GPIO12 = 6;
-const int GPIO13 = 7;
-const int GPIO14 = 5;
-const int GPIO15 = 8;
-const int GPIO16 = 0;
-const int ADC = 17;
-// const int SCL = GPIO5;
-// const int SDA = GPIO4;
-const int REDLED = 0; //GPIO0 in Lua
-const int BLUELED = 2; //GPI02 in Lua
-const bool ON = LOW;
+const int ADC = 17; // analog pin
+const int REDLED = 0;
+const int BLUELED = 2;
+const bool ON = LOW; // onboard LEDs are reversed
 const bool OFF = HIGH;
 
-int micLevel = 0;
-int micLevelInit = 0;
-const int threshold = 4;
-
+const int sampleWindow = 50;  // # of milliseconds per sample
+const int threshold = 50; // tolerance of sound level difference peakToPeak
 
 void setup() {
   pinMode(BLUELED, OUTPUT);
-
   Serial.begin(115200);
-
-  micLevelInit = analogRead(ADC);
-
-  Serial.printf("Mic threshold=%d\n", threshold);
-  Serial.printf("Mic levelinit=%d\n", micLevelInit);
 }
 
 void loop() {
-  micLevel = analogRead(ADC);
+  long startMillis = millis();
+  int peakToPeak = 0;
+  int signalMax = 0;
+  int signalMin = 1024;
 
-  if (micLevel >= micLevelInit + threshold)
+  while (millis() - startMillis < sampleWindow)
   {
-     Serial.printf("Above threshold=%d\n", micLevel);
-     digitalWrite(BLUELED, ON);
+    int sample = analogRead(ADC);
+
+    if (sample < 1024)  // reject invalid readings
+    {
+      if (sample > signalMax)
+      {
+        signalMax = sample;
+      }
+      else if (sample < signalMin)
+      {
+        signalMin = sample;
+      }
+    }
   }
-  else if (micLevel <= micLevelInit - threshold)
+
+  peakToPeak = signalMax - signalMin;  // we care about the difference 
+
+  if (peakToPeak > threshold)
   {
-    Serial.printf("init=%d, current=%d\n", micLevelInit, micLevel);
+    // turn on LED if volume exceeds threshold
+    digitalWrite(BLUELED, ON);
+    Serial.printf("Above threshold=%d\n", peakToPeak); // debug
   }
   else
   {
     digitalWrite(BLUELED, OFF);
   }
-  
-  delay(100);
 }
