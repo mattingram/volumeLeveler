@@ -23,7 +23,7 @@ IRsend irsend(IR_LED);
 
 // Microphone Config
 const int microphoneSampleWindow = 50;  // # of milliseconds per sample
-const int microphoneThreshold = 25; // tolerance of sound level difference peakToPeak
+const int microphoneThreshold = 10; // tolerance of sound level difference peakToPeak
 
 void setup() {
   pinMode(BLUELED, OUTPUT);
@@ -234,7 +234,7 @@ int getMicrophoneVolume()
       }
     }
   }
-
+  //Serial.printf("Min=%d, Max=%d\n", signalMin, signalMax);
   return signalMax - signalMin;  // we care about the difference
 }
 
@@ -247,12 +247,11 @@ void loop() {
     // turn on LED and send Volume Down
     digitalWrite(BLUELED, ON);    
     irsend.sendPanasonic64(0x400401008485);
+	delay(500);
     Serial.printf("Volume=%d\n", volume);
   }
   else
   {
     digitalWrite(BLUELED, OFF);
   }
-
-  delay(200);
 }
