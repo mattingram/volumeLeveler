@@ -202,6 +202,7 @@ void readAndPrintIrCode()
     dumpInfo(&results);
     //dumpCode(&results);
     //dumpRaw(&results);
+	delay(500);
     irrecv.resume(); // Receive the next value
   }
 }
@@ -234,24 +235,34 @@ int getMicrophoneVolume()
       }
     }
   }
-  //Serial.printf("Min=%d, Max=%d\n", signalMin, signalMax);
+  Serial.printf("Min=%d, Max=%d, Diff=%d\n", signalMin, signalMax, signalMax - signalMin);
   return signalMax - signalMin;  // we care about the difference
 }
 
-void loop() {
-  //readAndPrintIrCode();
+const int IR_Enabled=true;
+
+void runVolumeLeveler()
+{
   int volume = getMicrophoneVolume();
 
   if (volume > microphoneThreshold)
   {
-    // turn on LED and send Volume Down
-    digitalWrite(BLUELED, ON);    
-    irsend.sendPanasonic64(0x400401008485);
-	delay(500);
-    Serial.printf("Volume=%d\n", volume);
+    digitalWrite(BLUELED, ON);
+
+	// Send volume down code if IR enabled
+	if (IR_Enabled)
+	{
+    	irsend.sendPanasonic64(0x400401008485);
+		delay(500);
+	}
   }
   else
   {
     digitalWrite(BLUELED, OFF);
   }
+}
+
+void loop() {
+  readAndPrintIrCode();
+  //runVolumeLeveler();
 }
