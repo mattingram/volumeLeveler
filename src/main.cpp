@@ -15,6 +15,7 @@ const int REDLED = 0;
 const int BLUELED = 2;
 const bool ON = LOW; // onboard LEDs are reversed
 const bool OFF = HIGH;
+const int IR_Enabled = false; // disable IR blaster
 
 // IR Receiver/Transmitter Config
 const int captureBufSize = 150;             // Size of the IR capture buffer.
@@ -235,11 +236,9 @@ int getMicrophoneVolume()
       }
     }
   }
-  Serial.printf("Min=%d, Max=%d, Diff=%d\n", signalMin, signalMax, signalMax - signalMin);
+  //Serial.printf("Min=%d, Max=%d, Diff=%d\n", signalMin, signalMax, signalMax - signalMin);
   return signalMax - signalMin;  // we care about the difference
 }
-
-const int IR_Enabled=true;
 
 void runVolumeLeveler()
 {
@@ -248,6 +247,13 @@ void runVolumeLeveler()
   if (volume > microphoneThreshold)
   {
     digitalWrite(BLUELED, ON);
+	//Serial.printf("%d - exceeds threshold\n", volume);
+	int level = volume % 10;
+	for (int i=0; i<level; i++)
+	{
+		Serial.printf(">");
+	}
+	Serial.println();
 
 	// Send volume down code if IR enabled
 	if (IR_Enabled)
@@ -259,10 +265,12 @@ void runVolumeLeveler()
   else
   {
     digitalWrite(BLUELED, OFF);
+	//Serial.printf("%d\n", volume);
+	Serial.println("-");
   }
 }
 
 void loop() {
-  readAndPrintIrCode();
-  //runVolumeLeveler();
+  //readAndPrintIrCode();
+  runVolumeLeveler();
 }
