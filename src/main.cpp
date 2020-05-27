@@ -15,7 +15,7 @@ const int REDLED = 0;
 const int BLUELED = 2;
 const bool ON = LOW; // onboard LEDs are reversed
 const bool OFF = HIGH;
-const int IR_Enabled = false; // disable IR blaster
+const int IR_Enabled = true; // disable IR blaster
 
 // IR Receiver/Transmitter Config
 const int captureBufSize = 150;             // Size of the IR capture buffer.
@@ -24,7 +24,11 @@ IRsend irsend(IR_LED);
 
 // Microphone Config
 const int microphoneSampleWindow = 50;  // # of milliseconds per sample
-const int microphoneThreshold = 10; // tolerance of sound level difference peakToPeak
+const int volumeThreshold = 12; // tolerance of sound level difference peakToPeak
+const int NumberOfVolumeSamplesToAverage = 10; // # of samples to average
+
+int volumes[NumberOfVolumeSamplesToAverage]; // array to store volumes to average
+int loopCounter = 0;
 
 void setup() {
   pinMode(BLUELED, OUTPUT);
@@ -240,34 +244,72 @@ int getMicrophoneVolume()
   return signalMax - signalMin;  // we care about the difference
 }
 
+void printVolumeLevel(int volume)
+{
+	//if (volume > volumeThreshold)
+	{
+		Serial.printf("%d ", volume);
+
+		int level = volume / 2;
+		for (int i=0; i<level; i++)
+		{
+			Serial.printf(">");
+		}
+		
+		Serial.println();
+	}
+	// else
+	// {
+	// 	Serial.println("-");
+	// }	
+}
+
+int ComputeAverageVolume(int volume, int loopCounter)
+{
+  // store the volume in the array
+  volumes[loopCounter % NumberOfVolumeSamplesToAverage] = volume;
+
+  int sumOfVolume = 0;
+  for (int i=0; i < NumberOfVolumeSamplesToAverage; i++)
+  {
+	  sumOfVolume += volumes[i];
+  }
+  if (loopCounter < NumberOfVolumeSamplesToAverage)
+  {
+	  return sumOfVolume / (loopCounter + 1);
+  }
+  return sumOfVolume / NumberOfVolumeSamplesToAverage;
+}
+
 void runVolumeLeveler()
 {
   int volume = getMicrophoneVolume();
+  int averageVolume = ComputeAverageVolume(volume, loopCounter);
 
-  if (volume > microphoneThreshold)
+  //printVolumeLevel(volume);
+  printVolumeLevel(averageVolume);
+  
+  if (averageVolume > volumeThreshold)
   {
-    digitalWrite(BLUELED, ON);
-	//Serial.printf("%d - exceeds threshold\n", volume);
-	int level = volume % 10;
-	for (int i=0; i<level; i++)
-	{
-		Serial.printf(">");
-	}
-	Serial.println();
-
 	// Send volume down code if IR enabled
 	if (IR_Enabled)
 	{
-    	irsend.sendPanasonic64(0x400401008485);
-		delay(500);
+		// only send IR code once per NumberOfVolumeSamplesToAverage
+		if (loopCounter % NumberOfVolumeSamplesToAverage == 0)
+		{
+    		irsend.sendPanasonic64(0x400401008485);
+			digitalWrite(BLUELED, ON);
+		}
+		//delay(500);
 	}
   }
   else
   {
     digitalWrite(BLUELED, OFF);
 	//Serial.printf("%d\n", volume);
-	Serial.println("-");
   }
+
+  loopCounter++;
 }
 
 void loop() {
