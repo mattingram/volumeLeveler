@@ -23,11 +23,11 @@ IRrecv irrecv(IR_Receiver, captureBufSize);
 IRsend irsend(IR_LED);
 
 // Microphone Config
-const int microphoneSampleWindow = 50;  // # of milliseconds per sample
-const int volumeThreshold = 12; // tolerance of sound level difference peakToPeak
-const int NumberOfVolumeSamplesToAverage = 10; // # of samples to average
+const int MicrophoneSampleDurationInMillis = 50;  // # of milliseconds per sample
+const int VolumeThresholdMax = 12; // tolerance of sound level difference peakToPeak
+const int NumberOfVolumeSamplesToAverage = 10;
 
-int volumes[NumberOfVolumeSamplesToAverage]; // array to store volumes to average
+int volumeReading[NumberOfVolumeSamplesToAverage]; // array to store volume readings to average
 int loopCounter = 0;
 
 void setup() {
@@ -214,17 +214,17 @@ void readAndPrintIrCode()
 
 //+=============================================================================
 // Read from analog microphone sensor.
-// Sample for a duration of milliseconds in the microphoneSampleWindow.
+// Sample for a duration of milliseconds in the MicrophoneSampleDurationInMillis.
 // Determine min/max volume for that sample duration.
 // Return difference as the volume.
 //
-int getMicrophoneVolume()
+int SampleVolumeLevel()
 {
   long startMillis = millis();
   int signalMax = 0;
   int signalMin = 1024;
 
-  while (millis() - startMillis < microphoneSampleWindow)
+  while (millis() - startMillis < MicrophoneSampleDurationInMillis)
   {
     int sample = analogRead(ADC);
 
@@ -244,9 +244,9 @@ int getMicrophoneVolume()
   return signalMax - signalMin;  // we care about the difference
 }
 
-void printVolumeLevel(int volume)
+void PrintVolumeLevel(int volume)
 {
-	//if (volume > volumeThreshold)
+	//if (volume > VolumeThresholdMax)
 	{
 		Serial.printf("%d ", volume);
 
@@ -261,18 +261,18 @@ void printVolumeLevel(int volume)
 	// else
 	// {
 	// 	Serial.println("-");
-	// }	
+	// }
 }
 
 int ComputeAverageVolume(int volume, int loopCounter)
 {
   // store the volume in the array
-  volumes[loopCounter % NumberOfVolumeSamplesToAverage] = volume;
+  volumeReading[loopCounter % NumberOfVolumeSamplesToAverage] = volume;
 
   int sumOfVolume = 0;
   for (int i=0; i < NumberOfVolumeSamplesToAverage; i++)
   {
-	  sumOfVolume += volumes[i];
+	  sumOfVolume += volumeReading[i];
   }
   if (loopCounter < NumberOfVolumeSamplesToAverage)
   {
@@ -281,15 +281,15 @@ int ComputeAverageVolume(int volume, int loopCounter)
   return sumOfVolume / NumberOfVolumeSamplesToAverage;
 }
 
-void runVolumeLeveler()
+void LevelVolume()
 {
-  int volume = getMicrophoneVolume();
+  int volume = SampleVolumeLevel();
   int averageVolume = ComputeAverageVolume(volume, loopCounter);
 
-  //printVolumeLevel(volume);
-  printVolumeLevel(averageVolume);
+  //PrintVolumeLevel(volume);
+  //PrintVolumeLevel(averageVolume);
   
-  if (averageVolume > volumeThreshold)
+  if (averageVolume > VolumeThresholdMax)
   {
 	// Send volume down code if IR enabled
 	if (IR_Enabled)
@@ -300,13 +300,11 @@ void runVolumeLeveler()
     		irsend.sendPanasonic64(0x400401008485);
 			digitalWrite(BLUELED, ON);
 		}
-		//delay(500);
 	}
   }
   else
   {
     digitalWrite(BLUELED, OFF);
-	//Serial.printf("%d\n", volume);
   }
 
   loopCounter++;
@@ -314,5 +312,5 @@ void runVolumeLeveler()
 
 void loop() {
   //readAndPrintIrCode();
-  runVolumeLeveler();
+  LevelVolume();
 }
