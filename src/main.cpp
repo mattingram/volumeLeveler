@@ -34,8 +34,11 @@ void setup() {
   pinMode(BLUELED, OUTPUT);
   pinMode(IR_LED, OUTPUT);
   Serial.begin(115200);
-  irsend.begin();
-  irrecv.enableIRIn();
+  if (IR_Enabled)
+  {
+	irsend.begin();
+	irrecv.enableIRIn();
+  }
 }
 
 //+=============================================================================
@@ -196,17 +199,17 @@ void dumpCode(decode_results *results) {
 //+=============================================================================
 // Read IR Receiver then decode and print the IR Code
 //
-void readAndPrintIrCode()
+void ReadAndPrintIrCode()
 {
     // Read IR Receiver and print results in HEX
   decode_results results;
   if (irrecv.decode(&results))
   {
-    //Serial.print("HEX=" + uint64ToString(results.value, 16) + "\r\n");
-    //fullCode(&results);
+    Serial.print("HEX=" + uint64ToString(results.value, 16) + "\r\n");
+    fullCode(&results);
     dumpInfo(&results);
-    //dumpCode(&results);
-    //dumpRaw(&results);
+    dumpCode(&results);
+    dumpRaw(&results);
 	delay(500);
     irrecv.resume(); // Receive the next value
   }
@@ -311,6 +314,6 @@ void LevelVolume()
 }
 
 void loop() {
-  //readAndPrintIrCode();
+  //ReadAndPrintIrCode();
   LevelVolume();
 }
